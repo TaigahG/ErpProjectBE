@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
-import models
-from crud.api.v1.endpoints import financial
-from models.financial import Base
+from crud.api.v1.endpoints import financial, invoice
+from models import financial as financial_models
+from models import invoice as invoice_models
 
 app = FastAPI(title="ERP SaaS API", version="0.1.0")
 
@@ -21,9 +21,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-models.Base.metadata.create_all(bind=engine)
+financial_models.Base.metadata.create_all(bind=engine)
+invoice_models.Base.metadata.create_all(bind=engine)
+
 
 app.include_router(financial.router, prefix="/api/v1/financial", tags=["financial"])
+app.include_router(invoice.router, prefix="/api/v1/invoice", tags=["invoice"])
 
 if __name__ == '__main__':
     import uvicorn

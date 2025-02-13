@@ -1,11 +1,12 @@
-from pydantic import BaseModel, condecimal
+from pydantic import BaseModel, Field, condecimal
 from datetime import datetime
 from typing import Optional
+from decimal import Decimal
 from models.financial import TransactionType
 
 
 class TransactionBase(BaseModel):
-    amount: condecimal = condecimal(max_digits=10, decimal_places=2)
+    amount: Decimal = Field(gt=0)  
     transaction_type: TransactionType
     description: Optional[str] = None
     category: str
