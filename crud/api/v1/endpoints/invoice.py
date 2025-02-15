@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -9,6 +10,8 @@ from schemas.invoice import (
 )
 from models.invoice import InvoiceStatus
 from crud import invoice
+import os
+from utils.pdf_generator import PDFGenerator
 
 router = APIRouter()
 
@@ -48,3 +51,36 @@ def add_payment(invoice_id: int, payment: PaymentHistoryCreate, db: Session = De
     if not db_invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return db_invoice
+
+@router.get("/invoices/{invoice_id}/pdf", response_class=FileResponse)
+async def generate_invoice_pdf(
+    invoice_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        db_invoice = invoice.get_invoice(db, invoice_id)
+        if not db_invoice:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        
+        os.makedirs("invoices", exist_ok=True)
+        
+        pdf_generator = PDFGenerator(os.getenv("ANTHROPIC_API_KEY"))
+        output_path = f"invoices/invoice_{invoice_id}.pdf"
+        
+        pdf_path = pdf_generator.create_pdf(db_invoice, output_path)
+        
+        db_invoice.pdf_url = pdf_path
+        db.commit()
+        
+        if os.path.exists(pdf_path):
+            return FileResponse(
+                path=pdf_path,
+                filename=f"invoice_{invoice_id}.pdf",
+                media_type="application/pdf"
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Failed to generate PDF")
+            
+    except Exception as e:
+        print(f"Error in generate_invoice_pdf: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

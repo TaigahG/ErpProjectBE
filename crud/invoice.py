@@ -71,7 +71,6 @@ def update_invoice(
         db.refresh(db_invoice)
     return db_invoice
 
-#add payment
 def add_payment(db: Session, invoice_id: int, payment: PaymentHistoryCreate) -> Optional[Invoice]:
     db_invoice = get_invoice(db, invoice_id)
     if not db_invoice:
@@ -88,4 +87,4 @@ def add_payment(db: Session, invoice_id: int, payment: PaymentHistoryCreate) -> 
     db.commit()
     db.refresh(db_invoice)
     return db_invoice
-#generate pdf url
+
