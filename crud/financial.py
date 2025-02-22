@@ -7,7 +7,14 @@ from schemas.financial import TransactionCreate, TransactionUpdate
 
 
 def create_transaction(db: Session, transaction: TransactionCreate) -> Transaction:
-    db_transaction = Transaction(**transaction.model_dump())
+    db_transaction = Transaction(
+        amount=transaction.amount,
+        transaction_type=transaction.transaction_type,
+        description=transaction.description,
+        category=transaction.category,
+        transaction_date=transaction.transaction_date,
+        notes=transaction.notes
+    )    
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)

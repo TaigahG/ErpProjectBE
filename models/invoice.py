@@ -1,4 +1,3 @@
-# app/models/invoice.py
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, Enum, ForeignKey, UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship

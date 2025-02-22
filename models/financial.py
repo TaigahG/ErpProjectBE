@@ -11,10 +11,10 @@ class TransactionType(PyEnum):
 class Transaction(Base):
     __tablename__ = "transactions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    amount = Column(Numeric(10, 2), nullable=False)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    amount = Column(Numeric(15, 2), nullable=False)
     transaction_type = Column(Enum(TransactionType), nullable=False)
     description = Column(String, nullable=True)
     category = Column(String, nullable=False)
-    transaction_date = Column(DateTime(timezone=True), server_default=func.now())
+    transaction_date = Column(DateTime(timezone=True), nullable=False)
     notes = Column(String, nullable=True)

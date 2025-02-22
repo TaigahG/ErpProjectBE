@@ -45,7 +45,7 @@ class PDFGenerator:
 
         except Exception as e:
             print(f"Error generating content: {str(e)}")
-            return "Invoice Description"  # Fallback content
+            return "Invoice Description" 
 
     def create_pdf(self, invoice, output_path):
         try:
