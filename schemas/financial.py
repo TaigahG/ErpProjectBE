@@ -12,6 +12,8 @@ class TransactionCreate(BaseModel):
     category: str
     transaction_date: datetime
     notes: Optional[str] = None
+    inventory_item_id: Optional[int] = None
+    quantity: Optional[int] = None
 
 class Transaction(TransactionCreate):
     id: int

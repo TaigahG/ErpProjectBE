@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, UUID4, Field, validator
+from pydantic import BaseModel, EmailStr, UUID4, Field, condecimal, validator
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -11,7 +11,11 @@ class InvoiceItemBase(BaseModel):
     amount: Decimal = Field(gt=0)
 
 class InvoiceItemCreate(InvoiceItemBase):
-    pass
+    description: str
+    quantity: condecimal(max_digits=10, decimal_places=2) = Field(gt=0)
+    unit_price: condecimal(max_digits=10, decimal_places=2) = Field(gt=0)
+    amount: condecimal(max_digits=10, decimal_places=2) = Field(gt=0)
+    inventory_item_id: Optional[int] = None
 
 class InvoiceItem(InvoiceItemBase):
     id: int

@@ -58,7 +58,11 @@ class InvoiceItem(Base):
     unit_price = Column(Numeric(10, 2), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
 
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+
     invoice = relationship("Invoice", back_populates="items")
+    inventory_item = relationship("InventoryItem", back_populates="invoice_items")
+
 
 class PaymentHistory(Base):
     __tablename__ = "payment_history"

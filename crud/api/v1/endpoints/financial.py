@@ -5,16 +5,39 @@ from datetime import datetime
 from database import get_db
 from schemas.financial import Transaction, TransactionCreate, TransactionUpdate
 from models.financial import TransactionType
-from crud import financial
+from crud import financial, inventory
 
 router = APIRouter()
 
-@router.post("/transactions/", response_model=Transaction)
-def create_transaction(
-    transaction: TransactionCreate,
-    db: Session = Depends(get_db)
-):
-    return financial.create_transaction(db, transaction)
+def create_transaction(db: Session, transaction: TransactionCreate) -> Transaction:
+    transaction_data = transaction.model_dump()
+    
+    # Handle inventory item if provided
+    inventory_item_id = transaction_data.pop('inventory_item_id', None)
+    quantity = transaction_data.pop('quantity', None)
+    
+    # Create transaction
+    db_transaction = Transaction(**transaction_data)
+    
+    # Link with inventory item if provided
+    if inventory_item_id and quantity:
+        # Check if inventory item exists
+        inventory_item = inventory.get_inventory_item(db, inventory_item_id)
+        if not inventory_item:
+            raise ValueError(f"Inventory item with ID {inventory_item_id} not found")
+        
+        # Link transaction to inventory item
+        db_transaction.inventory_item_id = inventory_item_id
+        db_transaction.quantity = quantity
+        
+        # Update inventory quantity based on transaction type
+        quantity_change = -quantity if transaction.transaction_type == TransactionType.INCOME else quantity
+        inventory.update_inventory_quantity(db, inventory_item_id, quantity_change)
+    
+    db.add(db_transaction)
+    db.commit()
+    db.refresh(db_transaction)
+    return db_transaction
 
 @router.get("/transactions/", response_model=List[Transaction])
 def list_transactions(skip: int = 0,

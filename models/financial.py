@@ -18,3 +18,8 @@ class Transaction(Base):
     category = Column(String, nullable=False)
     transaction_date = Column(DateTime(timezone=True), nullable=False)
     notes = Column(String, nullable=True)
+
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+    quantity = Column(Integer, nullable=True)
+
+    inventory_item = relationship("InventoryItem", back_populates="transactions")

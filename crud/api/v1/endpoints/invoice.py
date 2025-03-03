@@ -5,19 +5,57 @@ from typing import List, Optional
 from datetime import datetime
 from database import get_db
 from schemas.invoice import (
-    Invoice, InvoiceCreate, InvoiceUpdate,
+    Invoice, InvoiceCreate, InvoiceItem, InvoiceUpdate,
     PaymentHistoryCreate
 )
 from models.invoice import InvoiceStatus
-from crud import invoice
+from crud import inventory, invoice
 import os
 from utils.pdf_generator import PDFGenerator
 
 router = APIRouter()
 
-@router.post("/invoices/", response_model=Invoice)
-def create_invoice(invoice_data: InvoiceCreate,db: Session = Depends(get_db)):
-    return invoice.create_invoice(db, invoice_data)
+def create_invoice(db: Session, invoice: InvoiceCreate) -> Invoice:
+    # Calculate totals
+    subtotal = sum(item.quantity * item.unit_price for item in invoice.items)
+    tax_amount = subtotal * (invoice.tax_rate / 100)
+    total = subtotal + tax_amount
+
+    # Create invoice
+    db_invoice = Invoice(
+        **invoice.dict(exclude={'items'}),
+        subtotal=subtotal,
+        tax_amount=tax_amount,
+        total=total
+    )
+    db.add(db_invoice)
+    db.flush()  # Get ID without committing
+
+    # Create invoice items
+    for item in invoice.items:
+        item_data = item.dict()
+        inventory_item_id = item_data.pop('inventory_item_id', None)
+        
+        db_item = InvoiceItem(
+            invoice_id=db_invoice.id,
+            **item_data
+        )
+        
+        # Link with inventory item if provided
+        if inventory_item_id:
+            # Check if inventory item exists
+            inventory_item = inventory.get_inventory_item(db, inventory_item_id)
+            if inventory_item:
+                db_item.inventory_item_id = inventory_item_id
+                
+                # Update inventory quantity when invoice is created
+                inventory.update_inventory_quantity(db, inventory_item_id, -int(item.quantity))
+        
+        db.add(db_item)
+
+    db.commit()
+    db.refresh(db_invoice)
+    return db_invoice
 
 @router.get("/invoices/", response_model=List[Invoice])
 def list_invoices(
