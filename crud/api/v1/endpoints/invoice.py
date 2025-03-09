@@ -9,53 +9,18 @@ from schemas.invoice import (
     PaymentHistoryCreate
 )
 from models.invoice import InvoiceStatus
-from crud import inventory, invoice
+from crud import invoice
 import os
 from utils.pdf_generator import PDFGenerator
 
 router = APIRouter()
 
-def create_invoice(db: Session, invoice: InvoiceCreate) -> Invoice:
-    # Calculate totals
-    subtotal = sum(item.quantity * item.unit_price for item in invoice.items)
-    tax_amount = subtotal * (invoice.tax_rate / 100)
-    total = subtotal + tax_amount
-
-    # Create invoice
-    db_invoice = Invoice(
-        **invoice.dict(exclude={'items'}),
-        subtotal=subtotal,
-        tax_amount=tax_amount,
-        total=total
-    )
-    db.add(db_invoice)
-    db.flush()  # Get ID without committing
-
-    # Create invoice items
-    for item in invoice.items:
-        item_data = item.dict()
-        inventory_item_id = item_data.pop('inventory_item_id', None)
-        
-        db_item = InvoiceItem(
-            invoice_id=db_invoice.id,
-            **item_data
-        )
-        
-        # Link with inventory item if provided
-        if inventory_item_id:
-            # Check if inventory item exists
-            inventory_item = inventory.get_inventory_item(db, inventory_item_id)
-            if inventory_item:
-                db_item.inventory_item_id = inventory_item_id
-                
-                # Update inventory quantity when invoice is created
-                inventory.update_inventory_quantity(db, inventory_item_id, -int(item.quantity))
-        
-        db.add(db_item)
-
-    db.commit()
-    db.refresh(db_invoice)
-    return db_invoice
+@router.post("/invoices/", response_model=Invoice)
+def create_invoice(invoice_data: InvoiceCreate, db: Session = Depends(get_db)):
+    try:
+        return invoice.create_invoice(db, invoice_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/invoices/", response_model=List[Invoice])
 def list_invoices(
@@ -78,7 +43,7 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
 
 @router.put("/invoices/{invoice_id}", response_model=Invoice)
 def update_invoice(invoice_id: int, invoice_update: InvoiceUpdate, db: Session = Depends(get_db)):
-    db_invoice = invoice.update_invoices(db, invoice_id, invoice_update)
+    db_invoice = invoice.update_invoice(db, invoice_id, invoice_update)
     if not db_invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return db_invoice

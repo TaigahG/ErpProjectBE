@@ -16,10 +16,12 @@ class InvoiceItemCreate(InvoiceItemBase):
     unit_price: condecimal(max_digits=10, decimal_places=2) = Field(gt=0)
     amount: condecimal(max_digits=10, decimal_places=2) = Field(gt=0)
     inventory_item_id: Optional[int] = None
+    transaction_id: Optional[int] = None
 
 class InvoiceItem(InvoiceItemBase):
     id: int
     invoice_id: int
+    transaction_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -41,9 +43,9 @@ class PaymentHistory(PaymentHistoryBase):
         from_attributes = True
 
 class InvoiceBase(BaseModel):
-    client_name: str
-    client_email: EmailStr
-    client_address: str
+    client_name: Optional[str]
+    client_email: Optional[EmailStr]
+    client_address: Optional[str]
     payment_terms: PaymentTerms
     currency: Currency
     tax_rate: Decimal = Field(ge=0, le=100)
@@ -52,9 +54,12 @@ class InvoiceBase(BaseModel):
 class InvoiceCreate(InvoiceBase):
     due_date: datetime
     items: List[InvoiceItemCreate]
+    transaction_ids: Optional[List[int]] = None
 
     @validator('items')
-    def validate_items(cls, v):
+    def validate_items(cls, v, values):
+        if values.get('transaction_ids') and len(values.get('transaction_ids', [])) > 0:
+            return v
         if not v:
             raise ValueError('At least one item is required')
         return v

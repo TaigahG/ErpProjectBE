@@ -15,6 +15,10 @@ def create_inventory_item(item: InventoryItemCreate, db: Session = Depends(get_d
 def list_inventory_items(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db)):
     return inventory.get_inventory_items(db, skip, limit, search)
 
+@router.get("/analysis", response_model=dict)
+def get_inventory_analysis(db: Session = Depends(get_db)):
+    return inventory.analyze_inventory_sales(db)
+
 @router.get("/{item_id}", response_model=InventoryItem)
 def get_inventory_item(item_id: int, db: Session = Depends(get_db)):
     db_item = inventory.get_inventory_item(db, item_id)
@@ -29,13 +33,9 @@ def update_inventory_item(item_id: int, item_update: InventoryItemUpdate, db: Se
         raise HTTPException(status_code=404, detail="Inventory item is not found")
     return db_item
 
-@router.delete("/{item_id}", response_model=InventoryItem)
+@router.delete("/{item_id}")
 def delete_inventory_item(item_id: int, db: Session = Depends(get_db)):
     success = inventory.delete_inventory_item(db, item_id)
     if not success:
         raise HTTPException(status_code=404, detail="Inventory item is not found")
     return {"status": "success"}
-
-@router.get("/analysis", response_model=dict)
-def get_inventory_analysis(db: Session = Depends(get_db)):
-    return inventory.analyze_inventory_sales(db)

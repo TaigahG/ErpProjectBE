@@ -30,9 +30,9 @@ class Invoice(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     invoice_number = Column(UUID, default=uuid.uuid4, unique=True, nullable=False)
-    client_name = Column(String, nullable=False)
-    client_email = Column(String, nullable=False)
-    client_address = Column(String, nullable=False)
+    client_name = Column(String, nullable=True)
+    client_email = Column(String, nullable=True)
+    client_address = Column(String, nullable=True)
     issue_date = Column(DateTime(timezone=True), server_default=func.now())
     due_date = Column(DateTime(timezone=True), nullable=False)
     status = Column(Enum(InvoiceStatus), default=InvoiceStatus.DRAFT)
@@ -59,9 +59,11 @@ class InvoiceItem(Base):
     amount = Column(Numeric(10, 2), nullable=False)
 
     inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=True)
 
     invoice = relationship("Invoice", back_populates="items")
     inventory_item = relationship("InventoryItem", back_populates="invoice_items")
+    transactions = relationship("Transaction", back_populates="invoice_items")
 
 
 class PaymentHistory(Base):

@@ -2,19 +2,32 @@ from sqlalchemy.orm import Session
 from sqlalchemy import extract, func
 from datetime import datetime
 from typing import List, Optional
+from crud import inventory
 from models.financial import Transaction, TransactionType
 from schemas.financial import TransactionCreate, TransactionUpdate
 
 
 def create_transaction(db: Session, transaction: TransactionCreate) -> Transaction:
-    db_transaction = Transaction(
-        amount=transaction.amount,
-        transaction_type=transaction.transaction_type,
-        description=transaction.description,
-        category=transaction.category,
-        transaction_date=transaction.transaction_date,
-        notes=transaction.notes
-    )    
+    transaction_data = transaction.model_dump()
+    print(transaction_data)
+    inventory_item_id = transaction_data.pop('inventory_item_id', None)
+    print(inventory_item_id)
+    quantity = transaction_data.pop('quantity', None)
+    print(quantity)
+    
+    db_transaction = Transaction(**transaction_data)
+    
+    if inventory_item_id and quantity:
+        inventory_item = inventory.get_inventory_item(db, inventory_item_id)
+        if not inventory_item:
+            raise ValueError(f"Inventory item with ID {inventory_item_id} not found")
+        
+        db_transaction.inventory_item_id = inventory_item_id
+        db_transaction.quantity = quantity
+        
+        quantity_change = -quantity if transaction.transaction_type == TransactionType.INCOME else quantity
+        inventory.update_inventory_quantity(db, inventory_item_id, quantity_change)
+    
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)

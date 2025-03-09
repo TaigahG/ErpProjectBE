@@ -23,3 +23,6 @@ class Transaction(Base):
     quantity = Column(Integer, nullable=True)
 
     inventory_item = relationship("InventoryItem", back_populates="transactions")
+    invoice_items = relationship("InvoiceItem", back_populates="transactions")    
+
+    

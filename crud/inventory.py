@@ -91,6 +91,8 @@ def analyze_inventory_sales(db: Session) -> dict:
             Transaction.inventory_item_id == item.id,
             Transaction.transaction_type == TransactionType.INCOME
         ).group_by('month').order_by('month').all()
+
+        print(f"sales_by_month: {len(sales_by_month)}")
         
         if len(sales_by_month) >= 5:  
             X = np.array([
@@ -99,7 +101,6 @@ def analyze_inventory_sales(db: Session) -> dict:
             ])
             y = np.array([m.quantity for m in sales_by_month])
             
-            # Train Random Forest
             model = RandomForestRegressor(n_estimators=100, random_state=42)
             model.fit(X, y)
             
@@ -118,7 +119,6 @@ def analyze_inventory_sales(db: Session) -> dict:
                 "month_of_year": model.feature_importances_[1],
                 "week_of_year": model.feature_importances_[2]
             }
-            
             prediction_confidence = 0.7 + (len(sales_by_month) / 20)  
         else:
             predicted_quantity = 0

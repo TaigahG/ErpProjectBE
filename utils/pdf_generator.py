@@ -16,8 +16,12 @@ class PDFGenerator:
             items_list.append(f"{item.description}: {item.quantity} x {invoice.currency} {item.unit_price}")
         items_text = "; ".join(items_list)
 
+        client_info = ""
+        if invoice.client_name:
+            client_info = f"Company: {invoice.client_name}"
+
         prompt = f"""Generate a professional invoice description for:
-        Company: {invoice.client_name}
+        {client_info}
         Amount: {invoice.currency} {invoice.total}
         Items: {items_text}
         
@@ -65,9 +69,17 @@ class PDFGenerator:
             elements.append(header)
             elements.append(Spacer(1, 20))
             
-            elements.append(Paragraph(f"To: {invoice.client_name}", styles['Normal']))
-            elements.append(Paragraph(f"Email: {invoice.client_email}", styles['Normal']))
-            elements.append(Paragraph(f"Address: {invoice.client_address}", styles['Normal']))
+            # Only add client info if available
+            if invoice.client_name:
+                elements.append(Paragraph(f"To: {invoice.client_name}", styles['Normal']))
+            if invoice.client_email:
+                elements.append(Paragraph(f"Email: {invoice.client_email}", styles['Normal']))
+            if invoice.client_address:
+                elements.append(Paragraph(f"Address: {invoice.client_address}", styles['Normal']))
+            
+            elements.append(Spacer(1, 20))
+            elements.append(Paragraph(f"Date: {invoice.issue_date.strftime('%Y-%m-%d')}", styles['Normal']))
+            elements.append(Paragraph(f"Due Date: {invoice.due_date.strftime('%Y-%m-%d')}", styles['Normal']))
             elements.append(Spacer(1, 20))
             
             items_data = [['Description', 'Quantity', 'Unit Price', 'Amount']]
@@ -80,7 +92,7 @@ class PDFGenerator:
                 ])
             
             items_data.append(['', '', 'Subtotal:', f"{invoice.currency} {invoice.subtotal}"])
-            items_data.append(['', '', 'Tax:', f"{invoice.currency} {invoice.tax_amount}"])
+            items_data.append(['', '', f'Tax ({invoice.tax_rate}%):', f"{invoice.currency} {invoice.tax_amount}"])
             items_data.append(['', '', 'Total:', f"{invoice.currency} {invoice.total}"])
             
             table = Table(items_data)
@@ -100,6 +112,16 @@ class PDFGenerator:
             ]))
             
             elements.append(table)
+            
+            # Add notes if available
+            if invoice.notes:
+                elements.append(Spacer(1, 20))
+                elements.append(Paragraph("Notes:", styles['Heading3']))
+                elements.append(Paragraph(invoice.notes, styles['Normal']))
+            
+            # Add payment terms
+            elements.append(Spacer(1, 20))
+            elements.append(Paragraph(f"Payment Terms: {invoice.payment_terms.value}", styles['Normal']))
             
             doc.build(elements)
             return output_path
