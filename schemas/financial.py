@@ -14,6 +14,7 @@ class TransactionCreate(BaseModel):
     notes: Optional[str] = None
     inventory_item_id: Optional[int] = None
     quantity: Optional[int] = None
+    region: str
 
 class Transaction(TransactionCreate):
     id: int
@@ -28,3 +29,4 @@ class TransactionUpdate(BaseModel):
     category: Optional[str] = None
     transaction_date: Optional[datetime] = None
     notes: Optional[str] = None
+    region: Optional[str] = None

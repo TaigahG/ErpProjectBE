@@ -63,7 +63,6 @@ def update_inventory_quantity(db: Session, item_id: int, quantity_change: int) -
 def analyze_inventory_sales(db: Session) -> dict:
     
     items = db.query(InventoryItem).all()
-
     items_analysis = []
 
     for item in items:
@@ -84,6 +83,28 @@ def analyze_inventory_sales(db: Session) -> dict:
         total_revenue = sum(t.amount for t in transactions) + \
                        sum(i.amount for i in invoice_items)
         
+        # Regional analysis
+        regional_data = db.query(
+            Transaction.region, 
+            func.sum(Transaction.quantity).label('quantity_sold'),
+            func.sum(Transaction.amount).label('revenue')
+        ).filter(
+            Transaction.inventory_item_id == item.id,
+            Transaction.transaction_type == TransactionType.INCOME
+        ).group_by(Transaction.region).all()
+        
+        # Correctly format regional data
+        regional_sales = [
+            {
+                "region": region.region,  # Use region.region to get the string value
+                "quantity_sold": float(region.quantity_sold) if region.quantity_sold else 0,
+                "revenue": float(region.revenue) if region.revenue else 0,
+            }
+            for region in regional_data
+        ]
+
+        regional_sales.sort(key=lambda x: x["revenue"], reverse=True)
+        
         sales_by_month = db.query(
             func.date_trunc('month', Transaction.transaction_date).label('month'),
             func.sum(Transaction.quantity).label('quantity')
@@ -91,10 +112,8 @@ def analyze_inventory_sales(db: Session) -> dict:
             Transaction.inventory_item_id == item.id,
             Transaction.transaction_type == TransactionType.INCOME
         ).group_by('month').order_by('month').all()
-
-        print(f"sales_by_month: {len(sales_by_month)}")
         
-        if len(sales_by_month) >= 5:  
+        if len(sales_by_month) >= 3:  
             X = np.array([
                 [i, m.month.month, m.month.isocalendar()[1]]  
                 for i, m in enumerate(sales_by_month)
@@ -113,6 +132,12 @@ def analyze_inventory_sales(db: Session) -> dict:
             ]
             
             predicted_quantity = float(model.predict([next_month_features])[0])
+            
+            # Add safety check for division by zero
+            if sales_by_month[-1].quantity > 0:
+                growth_rate = (predicted_quantity - sales_by_month[-1].quantity) / sales_by_month[-1].quantity
+            else:
+                growth_rate = 0
             
             feature_importance = {
                 "time_trend": model.feature_importances_[0],
@@ -142,17 +167,41 @@ def analyze_inventory_sales(db: Session) -> dict:
             "prediction_confidence": prediction_confidence,
             "revenue_impact": float(total_revenue) / (1 + item.quantity) if item.quantity > 0 else 0,
             "restock_recommendation": "High" if (item.quantity < predicted_quantity * 2) else 
-                                     "Medium" if (item.quantity < predicted_quantity * 4) else "Low"
+                                     "Medium" if (item.quantity < predicted_quantity * 4) else "Low",
+            "regional_sales": regional_sales[:5]
         }
         
         items_analysis.append(item_analysis)
     
-        items_analysis.sort(key=lambda x: x["revenue_impact"], reverse=True)
-        
-        return {
-            "top_selling_items": items_analysis[:5],
-            "items_to_restock": [item for item in items_analysis if item["restock_recommendation"] == "High"],
-            "growth_items": sorted(items_analysis, key=lambda x: x["growth_rate"], reverse=True)[:5],
-            "all_items_analysis": items_analysis
+    # Properly indented - outside the loop
+    items_analysis.sort(key=lambda x: x["revenue_impact"], reverse=True)
+    
+    # Calculate overall top regions
+    overall_top_regions = db.query(
+        Transaction.region,
+        func.sum(Transaction.quantity).label('quantity_sold'),
+        func.sum(Transaction.amount).label('revenue'),
+        func.count(Transaction.id.distinct()).label('transaction_count')
+    ).filter(
+        Transaction.transaction_type == TransactionType.INCOME,
+        Transaction.inventory_item_id.isnot(None)
+    ).group_by(Transaction.region).order_by(func.sum(Transaction.amount).desc()).limit(5).all()
+    
+    formatted_top_regions = [
+        {
+            "region": region.region,
+            "quantity_sold": float(region.quantity_sold) if region.quantity_sold else 0,
+            "revenue": float(region.revenue) if region.revenue else 0,
+            "transaction_count": region.transaction_count
         }
-
+        for region in overall_top_regions
+    ]
+    
+    # Return statement outside the loop
+    return {
+        "top_selling_items": items_analysis[:5],
+        "items_to_restock": [item for item in items_analysis if item["restock_recommendation"] == "High"],
+        "growth_items": sorted(items_analysis, key=lambda x: x["growth_rate"], reverse=True)[:5],
+        "top_regions": formatted_top_regions,  # Added top regions overall
+        "all_items_analysis": items_analysis
+    }

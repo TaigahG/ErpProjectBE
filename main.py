@@ -12,6 +12,8 @@ app = FastAPI(title="ERP SaaS API", version="0.1.0")
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://localhost:5174",
+    "http://localhost:5175",
   
 ]
 
@@ -26,6 +28,7 @@ app.add_middleware(
 # financial_models.Base.metadata.drop_all(bind=engine)
 # invoice_models.Base.metadata.drop_all(bind=engine)
 # reports_models.Base.metadata.drop_all(bind=engine)
+# inventory_models.Base.metadata.drop_all(bind=engine)
  
 financial_models.Base.metadata.create_all(bind=engine)
 invoice_models.Base.metadata.create_all(bind=engine)
