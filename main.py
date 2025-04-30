@@ -28,6 +28,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def exception_handling(request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"ERROR PROCESSING REQUEST: {str(e)}\n{error_detail}")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal server error occurred: {str(e)}"}
+        )
+
 # financial_models.Base.metadata.drop_all(bind=engine)
 # invoice_models.Base.metadata.drop_all(bind=engine)
 # reports_models.Base.metadata.drop_all(bind=engine)
@@ -43,6 +57,23 @@ app.include_router(financial.router, prefix="/api/v1/financial", tags=["financia
 app.include_router(invoice.router, prefix="/api/v1/invoice", tags=["invoice"])
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["inventory"])
+
+
+from datetime import datetime
+
+@app.get("/health", tags=["system"])
+def health_check():
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+@app.get("/debug/env", tags=["system"], include_in_schema=False)
+async def debug_env():
+    import os
+    env_vars = {}
+    for key in os.environ:
+        if key in ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "ANTHROPIC_API_KEY"]:
+            env_vars[key] = "***" if "PASSWORD" in key or "KEY" in key else "present"
+    return {"env_vars_available": env_vars}
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8000))
 
