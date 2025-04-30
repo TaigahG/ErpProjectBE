@@ -18,8 +18,10 @@ while not connected:
         conn = engine.connect()
         connected = True
         print("databse connected")
-    except:
-        print("database not connected")
+        print("Db URL: {DATABASE_URL}")
+
+    except Exception as e:
+        print("database not connected {e}")
         break
 
 
