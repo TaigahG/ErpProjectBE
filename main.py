@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import os
 from database import engine
 from crud.api.v1.endpoints import financial, invoice, reports, inventory
 from models import financial as financial_models
@@ -20,7 +22,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,5 +44,6 @@ app.include_router(invoice.router, prefix="/api/v1/invoice", tags=["invoice"])
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["inventory"])
 if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
