@@ -92,3 +92,6 @@ def get_monthly_summary(db: Session, year: int, month: int) -> dict:
         "total_expense": expense,
         "net": income - expense
     }
+
+def get_financial_report(db: Session ):
+    pass

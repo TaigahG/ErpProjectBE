@@ -15,6 +15,8 @@ class TransactionCreate(BaseModel):
     inventory_item_id: Optional[int] = None
     quantity: Optional[int] = None
     region: str
+    account_category_id: int
+
 
 class Transaction(TransactionCreate):
     id: int
@@ -30,3 +32,19 @@ class TransactionUpdate(BaseModel):
     transaction_date: Optional[datetime] = None
     notes: Optional[str] = None
     region: Optional[str] = None
+
+
+class AccountCategoryBase(BaseModel):
+    name: str
+    code: str
+    type: TransactionType
+    parent_id: Optional[int] = None
+
+class AccountCategoryCreate(AccountCategoryBase):
+    pass
+
+class AccountCategory(AccountCategoryBase):
+    id: int
+
+    class Config:
+        from_attributes = True

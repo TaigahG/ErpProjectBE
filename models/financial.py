@@ -1,12 +1,16 @@
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, Enum, ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from enum import Enum as PyEnum
 from database import Base
 
 class TransactionType(PyEnum):
+    ASSET = "ASSET"
+    LIABILITY = "LIABILITY"
+    EQUITY = "EQUITY"
     INCOME = "INCOME"
     EXPENSE = "EXPENSE"
+
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -24,6 +28,21 @@ class Transaction(Base):
     quantity = Column(Integer, nullable=True)
 
     inventory_item = relationship("InventoryItem", back_populates="transactions")
-    invoice_items = relationship("InvoiceItem", back_populates="transactions")    
+    invoice_items = relationship("InvoiceItem", back_populates="transactions")   
+
+    account_category_id = Column(Integer, ForeignKey("account_categories.id"), nullable=False)
+    account_category = relationship("AccountCategory", back_populates="transactions")
+
+class AccountCategory(Base):
+    __tablename__ = "account_categories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, nullable=False, unique=True)
+    type = Column(Enum(TransactionType), nullable=False)
+    parent_id = Column(Integer, ForeignKey("account_categories.id"), nullable=True)
+    
+    children = relationship("AccountCategory", backref=backref("parent", remote_side=[id]))
+    transactions = relationship("Transaction", back_populates="account_category") 
 
     

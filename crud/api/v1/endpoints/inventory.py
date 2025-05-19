@@ -17,6 +17,8 @@ def list_inventory_items(skip: int = 0, limit: int = 100, search: Optional[str] 
 
 @router.get("/analysis", response_model=dict)
 def get_inventory_analysis(db: Session = Depends(get_db)):
+    print("Analyzing inventory sales...")
+
     return inventory.analyze_inventory_sales(db)
 
 @router.get("/{item_id}", response_model=InventoryItem)
